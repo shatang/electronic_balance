@@ -1,2 +1,2 @@
 # electronic_balance
-电子称
+电子秤
