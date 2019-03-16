@@ -1,0 +1,137 @@
+C51 COMPILER V9.00   MAIN                                                                  04/15/2018 13:05:45 PAGE 1   
+
+
+C51 COMPILER V9.00, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN main.OBJ
+COMPILER INVOKED BY: D:\Program Files\C51\BIN\C51.EXE main.c BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          /**********************************************************************
+   2          ----------------1.开发环境:Keil v4                                         ----------------
+   3          ----------------2.使用单片机型号：STC89C52RC               ----------------
+   4          ----------------3.单片机使用晶振：11.0592M                         ----------------
+   5          ----------------店铺名称小强电子设计，店铺网址http://52dpj.taobao.com   
+   6          ***********************************************************************/
+   7          #include "main.h"
+   8          #include "HX711.h"
+   9          #include "uart.h"
+  10          #include "LCD1602.h"
+  11          unsigned long HX711_Buffer = 0;
+  12          unsigned long Weight_Maopi = 0;
+  13          long Weight_Shiwu = 0;
+  14          unsigned char flag = 0;
+  15          bit Flag_ERROR = 0;
+  16          
+  17          //校准参数
+  18          //因为不同的传感器特性曲线不是很一致，因此，每一个传感器需要矫正这里这个参数才能使测量值很准确。
+  19          //当发现测试出来的重量偏大时，增加该数值。
+  20          //如果测试出来的重量偏小时，减小改数值。
+  21          //该值可以为小数
+  22          #define GapValue 210//不同量程的传感器此参数值大小不同，参数值的推导参考本店提供的原理教程说明部分
+  23          //****************************************************
+  24          //主函数
+  25          //****************************************************
+  26          void main()
+  27          {
+  28   1          Uart_Init();
+  29   1          Send_Word("Welcome to use!\n");      //串口初始化输出内容
+  30   1              Init_LCD1602();
+  31   1              LCD1602_write_com(0x80);
+  32   1              LCD1602_write_word("Welcome to use!");  //液晶初始化界面显示
+  33   1              Delay_ms(3000);          //延时,等待传感器稳定
+  34   1              Get_Maopi();                            //称毛皮重量
+  35   1              Delay_ms(3000);          //延时,等待传感器稳定
+  36   1              Get_Maopi();
+  37   1              Get_Maopi();
+  38   1              while(1)
+  39   1              {
+  40   2                      EA = 0;
+  41   2                      Get_Weight();                   //称重
+  42   2                      EA = 1;
+  43   2              //显示当前重量
+  44   2                      if( Flag_ERROR == 1)    //超重或者负重情况下输出error
+  45   2                      {
+  46   3                  Send_Word("ERROR\n");
+  47   3                              LCD1602_write_com(0x80+0x40);
+  48   3                              LCD1602_write_word("ERROR ");
+  49   3                      }               
+  50   2                      else    //以下是重量显示各个位对应值进行换算
+  51   2                      {       //串口输出
+  52   3                  Send_ASCII(Weight_Shiwu/1000 + 0X30);
+  53   3                  Send_ASCII(Weight_Shiwu%1000/100 + 0X30);
+  54   3                  Send_ASCII(Weight_Shiwu%100/10 + 0X30);
+  55   3                  Send_ASCII(Weight_Shiwu%10 + 0X30);
+C51 COMPILER V9.00   MAIN                                                                  04/15/2018 13:05:45 PAGE 2   
+
+  56   3                  Send_Word(" g\n");
+  57   3                              //LCD1602液晶显示
+  58   3                              LCD1602_write_com(0x80+0x40);
+  59   3                              LCD1602_write_data(Weight_Shiwu/1000 + 0X30);
+  60   3                  LCD1602_write_data(Weight_Shiwu%1000/100 + 0X30);
+  61   3                  LCD1602_write_data(Weight_Shiwu%100/10 + 0X30);
+  62   3                  LCD1602_write_data(Weight_Shiwu%10 + 0X30);
+  63   3                              LCD1602_write_word(" g");
+  64   3                      }
+  65   2                      
+  66   2              }
+  67   1      }
+  68          //****************************************************
+  69          //称重
+  70          //****************************************************
+  71          void Get_Weight()
+  72          {
+  73   1              Weight_Shiwu = HX711_Read();
+  74   1              Weight_Shiwu = Weight_Shiwu - Weight_Maopi;             //获取净重
+  75   1              if(Weight_Shiwu > 0)                    
+  76   1              {       
+  77   2                      Weight_Shiwu = (unsigned int)((float)Weight_Shiwu/GapValue);    //计算实物的实际重量                                                                                                                                                                            
+             -                                                                                
+  78   2                      if(Weight_Shiwu > 3000)         //超重报警
+  79   2                      {       
+  80   3                              Flag_ERROR = 1; 
+  81   3                      }
+  82   2                      else
+  83   2                      {  
+  84   3                              Flag_ERROR = 0;
+  85   3                      }
+  86   2              }
+  87   1              else
+  88   1              {
+  89   2                      Weight_Shiwu = 0;                       
+  90   2              }       
+  91   1      }
+  92          
+  93          //****************************************************
+  94          //获取毛皮重量
+  95          //****************************************************
+  96          void Get_Maopi()
+  97          {
+  98   1              Weight_Maopi = HX711_Read();    
+  99   1      } 
+ 100          
+ 101          //****************************************************
+ 102          //MS延时函数(12M晶振下测试)
+ 103          //****************************************************
+ 104          void Delay_ms(unsigned int n)
+ 105          {
+ 106   1              unsigned int  i,j;
+ 107   1              for(i=0;i<n;i++)
+ 108   1                      for(j=0;j<123;j++);
+ 109   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    546    ----
+   CONSTANT SIZE    =     54    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+C51 COMPILER V9.00   MAIN                                                                  04/15/2018 13:05:45 PAGE 3   
+
+   DATA SIZE        =     13    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      1    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
